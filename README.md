@@ -1,13 +1,13 @@
 # Crypto Streaming Pipeline
 
-Real-time cryptocurrency price streaming pipeline built with Apache Airflow, Apache Kafka (KRaft mode), Apache Spark Structured Streaming, and Apache Cassandra — fully containerized with Docker.
+Real-time cryptocurrency price streaming pipeline built with Apache Airflow, Apache Kafka (KRaft mode), Apache Spark Structured Streaming, Apache Cassandra, and a live Streamlit dashboard — fully containerized with Docker.
 
-Live BTC, ETH, and SOL prices are pulled from the Binance public API every minute, streamed through Kafka, processed in real time by Spark, and stored in Cassandra — both as raw records and as rolling 1-minute average aggregations.
+Live BTC, ETH, and SOL prices are pulled from the Binance public API every minute, streamed through Kafka, processed in real time by Spark, stored in Cassandra (raw records + rolling 1-minute averages), and visualized live in a Streamlit dashboard.
 
 ## Architecture
 
 ```
-Binance API → Airflow → Kafka (KRaft) → Spark Structured Streaming → Cassandra
+Binance API → Airflow → Kafka (KRaft) → Spark Structured Streaming → Cassandra → Streamlit dashboard
                                                                     (raw + aggregated)
 ```
 
@@ -19,16 +19,17 @@ Binance API → Airflow → Kafka (KRaft) → Spark Structured Streaming → Cas
 | **Apache Kafka (KRaft mode)** | Streaming backbone — decouples ingestion from processing. Runs without Zookeeper, using Kafka's native KRaft consensus protocol |
 | **Kafka UI** | Web interface to inspect topics and messages in real time |
 | **Apache Spark (Structured Streaming)** | Consumes the Kafka topic continuously; writes raw prices and computes rolling 1-minute average prices per symbol |
-| **Apache Cassandra** | Final storage — one table for raw prices, one for 1-minute aggregates |
+| **Apache Cassandra** | Storage — one table for raw prices, one for 1-minute aggregates |
+| **Streamlit dashboard** | Live web UI showing the latest price, price movement, and a chart per symbol, auto-refreshing every 5 seconds |
 | **Docker Compose** | Orchestrates and networks all services together |
 
 ### Design decisions
 
-This project intentionally diverges from a more "textbook" version of this architecture in a few ways:
-
-- **Kafka runs in KRaft mode** (no Zookeeper) — the modern, simplified way to run Kafka, and the direction the Kafka project itself is moving toward.
-- **No Schema Registry** — since there's a single producer and consumer under one person's control, JSON messages are used directly instead of Avro, keeping the pipeline simpler without losing correctness.
+- **Kafka runs in KRaft mode** (no Zookeeper) — the modern, simplified way to run Kafka.
+- **No Schema Registry** — a single producer/consumer pair under one person's control uses plain JSON instead of Avro, keeping the pipeline simpler without losing correctness.
 - **Kafka UI replaces Confluent Control Center** — a free, lightweight alternative for topic monitoring.
+- **The dashboard runs inside Docker, on the same network as Cassandra**, rather than connecting from the host machine. This avoids a real-world issue encountered during development: on Windows, Docker Desktop's network virtualization layer can make the Cassandra binary protocol unstable when accessed via `localhost`, even though the port itself is reachable. Connecting through Docker's internal service network (`cassandra:9042`) avoids this entirely — the same reason Spark connects the same way.
+- **The Cassandra Python driver uses the `libev` connection class** instead of the default `asyncore` reactor, for a more stable long-lived connection inside the container.
 
 ## Prerequisites
 
@@ -43,7 +44,7 @@ cd crypto-streaming-pipeline
 docker-compose up -d
 ```
 
-Give it 1-2 minutes for all services to fully initialize on first startup.
+Give it 1-2 minutes for all services to fully initialize on first startup. The dashboard container waits for Cassandra's healthcheck before starting.
 
 ### Access the UIs
 
@@ -52,6 +53,7 @@ Give it 1-2 minutes for all services to fully initialize on first startup.
 | Airflow | http://localhost:8080 | `admin` / `admin` |
 | Kafka UI | http://localhost:8082 | — |
 | Spark Master | http://localhost:8081 | — |
+| **Dashboard** | **http://localhost:8501** | — |
 
 ## Running the pipeline
 
@@ -96,9 +98,11 @@ docker exec -it <spark-master-container-name> /opt/spark/bin/spark-submit \
   /opt/spark-apps/spark_stream.py
 ```
 
-This job runs continuously, consuming new Kafka messages as they arrive and writing to both Cassandra tables.
+This job runs continuously, consuming new Kafka messages as they arrive and writing to both Cassandra tables. It must be restarted manually after a `docker-compose down` / `up`, since it isn't a managed Compose service.
 
-**5. Verify the data:**
+**5. Open the dashboard** at http://localhost:8501 to see live prices, a live chart, and the price movement over the displayed window — refreshing automatically every 5 seconds.
+
+You can also verify the data directly:
 ```bash
 docker exec -it <cassandra-container-name> cqlsh -e "SELECT * FROM crypto_keyspace.prices LIMIT 10;"
 docker exec -it <cassandra-container-name> cqlsh -e "SELECT * FROM crypto_keyspace.prices_avg_1min LIMIT 10;"
@@ -111,10 +115,13 @@ Or browse messages live in the Kafka UI at http://localhost:8082.
 ```
 .
 ├── docker-compose.yml       # All services and networking
+├── Dockerfile                # Image for the Streamlit dashboard
+├── requirements.txt          # Python dependencies for the dashboard
+├── dashboard.py               # Streamlit dashboard: live prices, chart, auto-refresh
 ├── dags/
-│   └── crypto_stream_dag.py # Airflow DAG: fetches Binance prices, publishes to Kafka
+│   └── crypto_stream_dag.py  # Airflow DAG: fetches Binance prices, publishes to Kafka
 ├── spark/
-│   └── spark_stream.py      # Spark job: consumes Kafka, writes raw + aggregated data to Cassandra
+│   └── spark_stream.py       # Spark job: consumes Kafka, writes raw + aggregated data to Cassandra
 └── README.md
 ```
 
@@ -124,14 +131,15 @@ Or browse messages live in the Kafka UI at http://localhost:8082.
 - Producing and consuming JSON messages with Kafka
 - Structured Streaming with Spark: schema parsing, watermarking, windowed aggregations, and `foreachBatch` for sinks that don't natively support streaming `update` mode
 - Data modeling in Cassandra with partition and clustering keys
-- Multi-container networking and debugging in Docker Compose (service name resolution, persistent volumes, container-to-container communication)
+- Building a live dashboard with Streamlit backed directly by a Cassandra data store
+- Multi-container networking and debugging in Docker Compose: service name resolution, persistent volumes, container-to-container communication, healthchecks, and diagnosing a Windows-specific Docker networking issue with a binary protocol client
 
 ## Possible next steps
 
 - Add more trading pairs
-- Build a live dashboard (Streamlit or Grafana) on top of the Cassandra tables
 - Add alerting on significant price movements
 - Scale out with multiple Spark workers
+- Persist the Spark streaming job as a managed Compose service instead of a manual `spark-submit`
 
 ## License
 

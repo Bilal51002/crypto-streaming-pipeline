@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15
@@ -79,6 +77,12 @@ services:
       CASSANDRA_CLUSTER_NAME: crypto_cluster
     volumes:
       - cassandra_data:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'describe keyspaces'"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -89,7 +93,6 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-
 
   spark-master:
     image: apache/spark:3.5.0
@@ -107,6 +110,14 @@ services:
       - spark-master
     volumes:
       - ./spark:/opt/spark-apps
+
+  dashboard:
+    build: .
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    ports:
+      - "8501:8501"
 
 volumes:
   kafka_data:
