@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS prices_avg_1min (
 
 **3. Activate the Airflow DAG** — go to the Airflow UI, find `crypto_price_stream`, and toggle it on. It runs automatically every minute, fetching BTC/ETH/SOL prices and publishing them to Kafka.
 
-![Airflow DAG](docs/airflow-dag-ui.png)
+![Airflow DAG](docs/airflow-dag-ui.jpeg)
 
 **4. Start the Spark Streaming job:**
 ```bash
@@ -106,7 +106,7 @@ This job runs continuously, consuming new Kafka messages as they arrive and writ
 
 **5. Open the dashboard** at http://localhost:8501 to see live prices, a live chart, and the price movement over the displayed window — refreshing automatically every 5 seconds.
 
-![Streamlit dashboard](docs/streamlit-live-dashboard.png)
+![Streamlit dashboard](docs/streamlit-live-dashboard.jpeg)
 
 You can also verify the data directly:
 ```bash
@@ -116,7 +116,7 @@ docker exec -it <cassandra-container-name> cqlsh -e "SELECT * FROM crypto_keyspa
 
 Or browse messages live in the Kafka UI at http://localhost:8082.
 
-![Kafka UI](docs/kafka-ui-messages.png)
+![Kafka UI](docs/kafka-ui-messages.jpeg)
 
 ## Project structure
 
@@ -132,9 +132,9 @@ Or browse messages live in the Kafka UI at http://localhost:8082.
 │   └── spark_stream.py       # Spark job: consumes Kafka, writes raw + aggregated data to Cassandra
 ├── docs/
 │   ├── architecture-diagram.jpeg
-│   ├── airflow-dag-ui.png
-│   ├── kafka-ui-messages.png
-│   └── streamlit-live-dashboard.png
+│   ├── airflow-dag-ui.jpeg
+│   ├── kafka-ui-messages.jpeg
+│   └── streamlit-live-dashboard.jpeg
 └── README.md
 ```
 
