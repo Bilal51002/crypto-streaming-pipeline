@@ -31,6 +31,20 @@ Binance API → Airflow → Kafka (KRaft) → Spark Structured Streaming → Cas
 - **The dashboard runs inside Docker, on the same network as Cassandra**, rather than connecting from the host machine. This avoids a real-world issue encountered during development: on Windows, Docker Desktop's network virtualization layer can make the Cassandra binary protocol unstable when accessed via `localhost`, even though the port itself is reachable. Connecting through Docker's internal service network (`cassandra:9042`) avoids this entirely — the same reason Spark connects the same way.
 - **The Cassandra Python driver uses the `libev` connection class** instead of the default `asyncore` reactor, for a more stable long-lived connection inside the container.
 
+## Screenshots
+
+**Architecture diagram**
+![Architecture](docs/architecture-diagram.png)
+
+**Airflow DAG**
+![Airflow DAG](docs/airflow-dag-ui.png)
+
+**Kafka UI — live messages**
+![Kafka UI](docs/kafka-ui-messages.png)
+
+**Streamlit live dashboard**
+![Streamlit dashboard](docs/streamlit-live-dashboard.png)
+
 ## Prerequisites
 
 - [Docker](https://www.docker.com/) and Docker Compose
@@ -122,6 +136,11 @@ Or browse messages live in the Kafka UI at http://localhost:8082.
 │   └── crypto_stream_dag.py  # Airflow DAG: fetches Binance prices, publishes to Kafka
 ├── spark/
 │   └── spark_stream.py       # Spark job: consumes Kafka, writes raw + aggregated data to Cassandra
+├── docs/
+│   ├── architecture-diagram.png
+│   ├── airflow-dag-ui.png
+│   ├── kafka-ui-messages.png
+│   └── streamlit-live-dashboard.png
 └── README.md
 ```
 
