@@ -6,6 +6,8 @@ Live BTC, ETH, and SOL prices are pulled from the Binance public API every minut
 
 ## Architecture
 
+![Architecture](docs/architecture-diagram.jpeg)
+
 ```
 Binance API → Airflow → Kafka (KRaft) → Spark Structured Streaming → Cassandra → Streamlit dashboard
                                                                     (raw + aggregated)
@@ -30,20 +32,6 @@ Binance API → Airflow → Kafka (KRaft) → Spark Structured Streaming → Cas
 - **Kafka UI replaces Confluent Control Center** — a free, lightweight alternative for topic monitoring.
 - **The dashboard runs inside Docker, on the same network as Cassandra**, rather than connecting from the host machine. This avoids a real-world issue encountered during development: on Windows, Docker Desktop's network virtualization layer can make the Cassandra binary protocol unstable when accessed via `localhost`, even though the port itself is reachable. Connecting through Docker's internal service network (`cassandra:9042`) avoids this entirely — the same reason Spark connects the same way.
 - **The Cassandra Python driver uses the `libev` connection class** instead of the default `asyncore` reactor, for a more stable long-lived connection inside the container.
-
-## Screenshots
-
-**Architecture diagram**
-![Architecture](docs/architecture-diagram.png)
-
-**Airflow DAG**
-![Airflow DAG](docs/airflow-dag-ui.png)
-
-**Kafka UI — live messages**
-![Kafka UI](docs/kafka-ui-messages.png)
-
-**Streamlit live dashboard**
-![Streamlit dashboard](docs/streamlit-live-dashboard.png)
 
 ## Prerequisites
 
@@ -103,6 +91,8 @@ CREATE TABLE IF NOT EXISTS prices_avg_1min (
 
 **3. Activate the Airflow DAG** — go to the Airflow UI, find `crypto_price_stream`, and toggle it on. It runs automatically every minute, fetching BTC/ETH/SOL prices and publishing them to Kafka.
 
+![Airflow DAG](docs/airflow-dag-ui.png)
+
 **4. Start the Spark Streaming job:**
 ```bash
 docker exec -it <spark-master-container-name> /opt/spark/bin/spark-submit \
@@ -116,6 +106,8 @@ This job runs continuously, consuming new Kafka messages as they arrive and writ
 
 **5. Open the dashboard** at http://localhost:8501 to see live prices, a live chart, and the price movement over the displayed window — refreshing automatically every 5 seconds.
 
+![Streamlit dashboard](docs/streamlit-live-dashboard.png)
+
 You can also verify the data directly:
 ```bash
 docker exec -it <cassandra-container-name> cqlsh -e "SELECT * FROM crypto_keyspace.prices LIMIT 10;"
@@ -123,6 +115,8 @@ docker exec -it <cassandra-container-name> cqlsh -e "SELECT * FROM crypto_keyspa
 ```
 
 Or browse messages live in the Kafka UI at http://localhost:8082.
+
+![Kafka UI](docs/kafka-ui-messages.png)
 
 ## Project structure
 
@@ -137,7 +131,7 @@ Or browse messages live in the Kafka UI at http://localhost:8082.
 ├── spark/
 │   └── spark_stream.py       # Spark job: consumes Kafka, writes raw + aggregated data to Cassandra
 ├── docs/
-│   ├── architecture-diagram.png
+│   ├── architecture-diagram.jpeg
 │   ├── airflow-dag-ui.png
 │   ├── kafka-ui-messages.png
 │   └── streamlit-live-dashboard.png
