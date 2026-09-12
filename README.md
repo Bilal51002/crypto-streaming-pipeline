@@ -41,7 +41,7 @@ Binance API → Airflow → Kafka (KRaft) → Spark Structured Streaming → Cas
 ## Getting started
 
 ```bash
-git clone https://github.com/<your-username>/crypto-streaming-pipeline.git
+git clone https://github.com/Bilal51002/crypto-streaming-pipeline.git
 cd crypto-streaming-pipeline
 docker-compose up -d
 ```
@@ -58,6 +58,8 @@ Give it 1-2 minutes for all services to fully initialize on first startup. The d
 | **Dashboard** | **http://localhost:8501** | — |
 
 ## Running the pipeline
+
+> Replace `<kafka-container-name>`, `<cassandra-container-name>`, and `<spark-master-container-name>` below with your actual container names, visible by running `docker ps` (they typically look like `<folder-name>-kafka-1`, `<folder-name>-cassandra-1`, etc.).
 
 **1. Create the Kafka topic** (first run only):
 ```bash
@@ -153,6 +155,11 @@ Or browse messages live in the Kafka UI at http://localhost:8082.
 - Add alerting on significant price movements
 - Scale out with multiple Spark workers
 - Persist the Spark streaming job as a managed Compose service instead of a manual `spark-submit`
+
+## Author
+
+**Bilal Khallabi**
+[LinkedIn](https://linkedin.com/in/bilal-khallabi-0a1a8a315) · [GitHub](https://github.com/Bilal51002)
 
 ## License
 
