@@ -1,5 +1,12 @@
 # Crypto Streaming Pipeline
 
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![Airflow](https://img.shields.io/badge/Apache-Airflow-017CEE?logo=apacheairflow&logoColor=white)
+![Kafka](https://img.shields.io/badge/Apache-Kafka-231F20?logo=apachekafka&logoColor=white)
+![Spark](https://img.shields.io/badge/Apache-Spark-E25A1C?logo=apachespark&logoColor=white)
+![Cassandra](https://img.shields.io/badge/Apache-Cassandra-1287B1?logo=apachecassandra&logoColor=white)
+![License](https://img.shields.io/badge/license-Educational-lightgrey)
+
 Real-time cryptocurrency price streaming pipeline built with Apache Airflow, Apache Kafka (KRaft mode), Apache Spark Structured Streaming, Apache Cassandra, and a live Streamlit dashboard — fully containerized with Docker.
 
 Live BTC, ETH, and SOL prices are pulled from the Binance public API every minute, streamed through Kafka, processed in real time by Spark, stored in Cassandra (raw records + rolling 1-minute averages), and visualized live in a Streamlit dashboard.
@@ -124,19 +131,20 @@ Or browse messages live in the Kafka UI at http://localhost:8082.
 
 ```
 .
-├── docker-compose.yml       # All services and networking
-├── Dockerfile                # Image for the Streamlit dashboard
-├── requirements.txt          # Python dependencies for the dashboard
-├── dashboard.py               # Streamlit dashboard: live prices, chart, auto-refresh
+├── docker-compose.yml         # All services and networking
+├── Dockerfile                 # Image for the Streamlit dashboard
+├── requirements.txt           # Python dependencies for the dashboard
+├── dashboard.py                # Streamlit dashboard: live prices, chart, auto-refresh
 ├── dags/
-│   └── crypto_stream_dag.py  # Airflow DAG: fetches Binance prices, publishes to Kafka
+│   └── crypto_stream_dag.py   # Airflow DAG: fetches Binance prices, publishes to Kafka
 ├── spark/
-│   └── spark_stream.py       # Spark job: consumes Kafka, writes raw + aggregated data to Cassandra
+│   └── spark_stream.py        # Spark job: consumes Kafka, writes raw + aggregated data to Cassandra
 ├── docs/
 │   ├── architecture-diagram.jpeg
 │   ├── airflow-dag-ui.jpeg
 │   ├── kafka-ui-messages.jpeg
 │   └── streamlit-live-dashboard.jpeg
+├── .gitignore
 └── README.md
 ```
 
@@ -148,6 +156,24 @@ Or browse messages live in the Kafka UI at http://localhost:8082.
 - Data modeling in Cassandra with partition and clustering keys
 - Building a live dashboard with Streamlit backed directly by a Cassandra data store
 - Multi-container networking and debugging in Docker Compose: service name resolution, persistent volumes, container-to-container communication, healthchecks, and diagnosing a Windows-specific Docker networking issue with a binary protocol client
+
+## Troubleshooting
+
+**Dashboard shows `NoHostAvailable` when connecting to Cassandra**
+Cassandra needs time to fully initialize (30-90s on first start). Check its healthcheck status:
+```bash
+docker inspect <cassandra-container-name> --format "{{.State.Health.Status}}"
+```
+It must show `healthy` before the dashboard can connect. If you're running the dashboard directly on your host machine (outside Docker) rather than as a Compose service, use `127.0.0.1` instead of the service name `cassandra`, and expect Windows/Docker Desktop networking to be less stable for this binary protocol than running everything inside Docker.
+
+**Kafka topic `crypto_prices` doesn't exist / `UNKNOWN_TOPIC_OR_PARTITION`**
+This happens if the `kafka_data` volume was removed (e.g. after `docker volume rm` or switching projects). Recreate the topic manually — see step 1 in "Running the pipeline".
+
+**Spark job not writing to Cassandra after a restart**
+The Spark Streaming job is started manually via `spark-submit` and does **not** restart automatically with `docker-compose up`. Re-run the command from step 4 after every `docker-compose down` / `up` cycle.
+
+**`ModuleNotFoundError: No module named 'kafka'` in the Airflow DAG**
+Make sure `_PIP_ADDITIONAL_REQUIREMENTS: 'requests kafka-python'` is set on **all three** Airflow services (`airflow-init`, `airflow-webserver`, `airflow-scheduler`) in `docker-compose.yml`, not just one — each runs in its own container and needs the dependency installed independently.
 
 ## Possible next steps
 
