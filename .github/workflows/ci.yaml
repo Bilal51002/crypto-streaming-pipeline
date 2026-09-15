@@ -35,3 +35,72 @@ jobs:
 
       - name: Build dashboard image
         run: docker build -t crypto-dashboard:ci .
+
+  integration-test:
+    name: Integration test (Kafka -> Spark -> Cassandra)
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start core services
+        run: docker compose up -d kafka cassandra spark-master spark-worker spark-job
+
+      - name: Wait for Cassandra to be healthy
+        run: |
+          for i in $(seq 1 30); do
+            status=$(docker inspect --format='{{.State.Health.Status}}' $(docker compose ps -q cassandra))
+            if [ "$status" = "healthy" ]; then
+              echo "Cassandra is healthy"
+              break
+            fi
+            echo "Waiting for Cassandra... ($i/30)"
+            sleep 5
+          done
+
+      - name: Create Kafka topic
+        run: |
+          docker compose exec -T kafka kafka-topics --create \
+            --topic crypto_prices --bootstrap-server localhost:9092 \
+            --partitions 1 --replication-factor 1 --if-not-exists
+
+      - name: Create Cassandra keyspace and tables
+        run: |
+          docker compose exec -T cassandra cqlsh -e "
+          CREATE KEYSPACE IF NOT EXISTS crypto_keyspace
+          WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+          CREATE TABLE IF NOT EXISTS crypto_keyspace.prices (
+              symbol text,
+              fetched_at timestamp,
+              price double,
+              PRIMARY KEY (symbol, fetched_at)
+          );
+
+          CREATE TABLE IF NOT EXISTS crypto_keyspace.prices_avg_1min (
+              symbol text,
+              window_start timestamp,
+              avg_price double,
+              PRIMARY KEY (symbol, window_start)
+          );
+          "
+
+      - name: Set up Python for test script
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: pip install kafka-python cassandra-driver
+
+      - name: Run pipeline test
+        run: python scripts/test_pipeline.py
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs spark-job kafka cassandra
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
