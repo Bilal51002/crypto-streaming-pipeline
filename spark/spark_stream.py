@@ -56,7 +56,7 @@ def main():
         .format("org.apache.spark.sql.cassandra")
         .option("keyspace", CASSANDRA_KEYSPACE)
         .option("table", CASSANDRA_TABLE)
-        .option("checkpointLocation", "/tmp/checkpoints/prices")
+        .option("checkpointLocation", "/opt/spark-checkpoints/prices")
         .outputMode("append")
         .start()
     )
@@ -73,7 +73,7 @@ def main():
     agg_query = (
         agg_df.writeStream
         .foreachBatch(write_agg_batch)
-        .option("checkpointLocation", "/tmp/checkpoints/agg")
+        .option("checkpointLocation", "/opt/spark-checkpoints/agg")
         .outputMode("update")
         .start()
     )
