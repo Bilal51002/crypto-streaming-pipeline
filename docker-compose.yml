@@ -102,6 +102,7 @@ services:
       - "7077:7077"
     volumes:
       - ./spark:/opt/spark-apps
+      - spark_checkpoints:/opt/spark-checkpoints
 
   spark-worker:
     image: apache/spark:3.5.0
@@ -110,6 +111,7 @@ services:
       - spark-master
     volumes:
       - ./spark:/opt/spark-apps
+      - spark_checkpoints:/opt/spark-checkpoints
 
   dashboard:
     build: .
@@ -123,3 +125,4 @@ volumes:
   kafka_data:
   cassandra_data:
   postgres_data:
+  spark_checkpoints:
