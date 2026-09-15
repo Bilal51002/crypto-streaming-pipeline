@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta
-from email import message
+from datetime import datetime, timedelta, timezone
+
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
@@ -14,6 +14,7 @@ default_args = {
 }
 
 import json
+
 import requests
 from kafka import KafkaProducer
 
@@ -36,7 +37,7 @@ def fetch_and_publish():
         message = {
             "symbol": data["symbol"],
             "price": float(data["price"]),
-            "fetched_at": datetime.utcnow().isoformat(),
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
         }
 
 
@@ -52,7 +53,7 @@ with DAG(
     default_args=default_args,
     description="Récupère les prix crypto depuis Binance et les publie dans Kafka",
     schedule=timedelta(minutes=1),
-    start_date=datetime(2024, 1, 1),
+    start_date=datetime(2024, 1, 1, tzinfo=timezone.utc),
     catchup=False,
     tags=["crypto", "kafka", "streaming"],
 ) as dag:

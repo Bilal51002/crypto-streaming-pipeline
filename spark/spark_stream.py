@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StringType, DoubleType, TimestampType
-from pyspark.sql.functions import from_json, col, window, avg
+from pyspark.sql.functions import avg, col, from_json, window
+from pyspark.sql.types import DoubleType, StringType, StructType, TimestampType
 
 KAFKA_BROKER = "kafka:9092"
 KAFKA_TOPIC = "crypto_prices"
