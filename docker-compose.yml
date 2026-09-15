@@ -113,6 +113,28 @@ services:
       - ./spark:/opt/spark-apps
       - spark_checkpoints:/opt/spark-checkpoints
 
+  spark-job:
+    image: apache/spark:3.5.0
+    depends_on:
+      spark-master:
+        condition: service_started
+      spark-worker:
+        condition: service_started
+      cassandra:
+        condition: service_healthy
+    volumes:
+      - ./spark:/opt/spark-apps
+      - spark_checkpoints:/opt/spark-checkpoints
+      - spark_ivy:/tmp/.ivy2
+    command: >
+      /opt/spark/bin/spark-submit
+      --master spark://spark-master:7077
+      --conf spark.jars.ivy=/tmp/.ivy2
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,com.datastax.spark:spark-cassandra-connector_2.12:3.5.0
+      --conf spark.cassandra.connection.host=cassandra
+      /opt/spark-apps/spark_stream.py
+    restart: unless-stopped
+
   dashboard:
     build: .
     depends_on:
@@ -126,3 +148,4 @@ volumes:
   cassandra_data:
   postgres_data:
   spark_checkpoints:
+  spark_ivy:
