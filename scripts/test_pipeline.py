@@ -10,11 +10,7 @@ TOPIC = "crypto_prices"
 CASSANDRA_HOST = "cassandra"
 
 
-def produce_test_message():
-    producer = KafkaProducer(
-        bootstrap_servers=BOOTSTRAP_SERVERS,
-        value_serializer=lambda v: json.dumps(v).encode("utf-8"),
-    )
+def send_test_message(producer):
     message = {
         "symbol": "BTCUSDT",
         "price": 99999.99,
@@ -37,15 +33,26 @@ def check_cassandra():
 
 
 if __name__ == "__main__":
-    produce_test_message()
+    producer = KafkaProducer(
+        bootstrap_servers=BOOTSTRAP_SERVERS,
+        value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+    )
+
+    # Spark peut mettre 1 à 3 minutes à démarrer en CI (téléchargement des
+    # packages Maven, pas de cache Ivy comme en local). Comme Spark lit Kafka
+    # avec startingOffsets=latest, on renvoie le message à chaque tentative
+    # pour être sûr qu'au moins un envoi arrive après que Spark soit abonné.
+    max_attempts = 18
+    wait_seconds = 15
 
     print("Attente que Spark traite le message...")
-    for attempt in range(12):
-        time.sleep(10)
+    for attempt in range(1, max_attempts + 1):
+        send_test_message(producer)
+        time.sleep(wait_seconds)
         if check_cassandra():
             print("Message retrouvé dans Cassandra — pipeline OK")
             sys.exit(0)
-        print(f"Tentative {attempt + 1}/12: pas encore trouvé")
+        print(f"Tentative {attempt}/{max_attempts}: pas encore trouvé")
 
     print("ÉCHEC: message jamais retrouvé dans Cassandra")
     sys.exit(1)
