@@ -67,7 +67,7 @@ Give it 1-2 minutes for all services to fully initialize on first startup. The d
 | Spark Master | http://localhost:8081 | — |
 | **Dashboard** | **http://localhost:8501** | — |
 
-![Spark Master UI](docs/spark-master-ui.png)
+![Spark Master UI](docs/spark-master-ui.jpeg)
 
 ## Running the pipeline
 
