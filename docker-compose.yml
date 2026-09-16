@@ -143,6 +143,16 @@ services:
     ports:
       - "8501:8501"
 
+  test-runner:
+    image: python:3.11-slim
+    depends_on:
+      - kafka
+      - cassandra
+    volumes:
+      - ./scripts:/scripts
+    working_dir: /scripts
+    command: ["sleep", "infinity"]
+
 volumes:
   kafka_data:
   cassandra_data:

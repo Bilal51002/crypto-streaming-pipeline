@@ -1,12 +1,14 @@
 import json
-import time
 import sys
-from kafka import KafkaProducer
-from cassandra.cluster import Cluster
+import time
 
-BOOTSTRAP_SERVERS = "localhost:9092"
+from cassandra.cluster import Cluster
+from kafka import KafkaProducer
+
+BOOTSTRAP_SERVERS = "kafka:9092"
 TOPIC = "crypto_prices"
-CASSANDRA_HOST = "localhost"
+CASSANDRA_HOST = "cassandra"
+
 
 def produce_test_message():
     producer = KafkaProducer(
@@ -22,6 +24,7 @@ def produce_test_message():
     producer.flush()
     print("Message envoyé dans Kafka:", message)
 
+
 def check_cassandra():
     cluster = Cluster([CASSANDRA_HOST])
     session = cluster.connect("crypto_keyspace")
@@ -31,6 +34,7 @@ def check_cassandra():
     found = list(rows)
     cluster.shutdown()
     return len(found) > 0
+
 
 if __name__ == "__main__":
     produce_test_message()

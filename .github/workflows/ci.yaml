@@ -45,7 +45,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Start core services
-        run: docker compose up -d kafka cassandra spark-master spark-worker spark-job
+        run: docker compose up -d kafka cassandra spark-master spark-worker spark-job test-runner
 
       - name: Wait for Cassandra to be healthy
         run: |
@@ -88,20 +88,15 @@ jobs:
           docker compose cp init.cql cassandra:/init.cql
           docker compose exec -T cassandra cqlsh -f /init.cql
 
-      - name: Set up Python for test script
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install test dependencies
-        run: pip install kafka-python cassandra-driver
+      - name: Install test dependencies in test-runner
+        run: docker compose exec -T test-runner pip install kafka-python cassandra-driver
 
       - name: Run pipeline test
-        run: python scripts/test_pipeline.py
+        run: docker compose exec -T test-runner python test_pipeline.py
 
       - name: Show logs on failure
         if: failure()
-        run: docker compose logs spark-job kafka cassandra
+        run: docker compose logs spark-job kafka cassandra test-runner
 
       - name: Tear down
         if: always()
