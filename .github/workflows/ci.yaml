@@ -45,7 +45,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Start core services
-        run: docker compose up -d kafka cassandra spark-master spark-worker spark-job test-runner
+        run: docker compose up -d kafka cassandra spark-master spark-worker test-runner
 
       - name: Wait for Cassandra to be healthy
         run: |
@@ -87,6 +87,9 @@ jobs:
           EOF
           docker compose cp init.cql cassandra:/init.cql
           docker compose exec -T cassandra cqlsh -f /init.cql
+
+      - name: Start Spark streaming job
+        run: docker compose up -d spark-job
 
       - name: Install test dependencies in test-runner
         run: docker compose exec -T test-runner pip install kafka-python cassandra-driver
