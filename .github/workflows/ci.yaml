@@ -67,7 +67,7 @@ jobs:
 
       - name: Create Cassandra keyspace and tables
         run: |
-          docker compose exec -T cassandra cqlsh -e "
+          cat > init.cql << 'EOF'
           CREATE KEYSPACE IF NOT EXISTS crypto_keyspace
           WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
 
@@ -84,7 +84,9 @@ jobs:
               avg_price double,
               PRIMARY KEY (symbol, window_start)
           );
-          "
+          EOF
+          docker compose cp init.cql cassandra:/init.cql
+          docker compose exec -T cassandra cqlsh -f /init.cql
 
       - name: Set up Python for test script
         uses: actions/setup-python@v5
