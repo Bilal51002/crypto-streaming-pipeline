@@ -126,13 +126,15 @@ services:
       - ./spark:/opt/spark-apps
       - spark_checkpoints:/opt/spark-checkpoints
       - spark_ivy:/tmp/.ivy2
+    entrypoint: /bin/bash
     command: >
+      -c "mkdir -p /tmp/.ivy2/cache /tmp/.ivy2/jars &&
       /opt/spark/bin/spark-submit
       --master spark://spark-master:7077
       --conf spark.jars.ivy=/tmp/.ivy2
       --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,com.datastax.spark:spark-cassandra-connector_2.12:3.5.0
       --conf spark.cassandra.connection.host=cassandra
-      /opt/spark-apps/spark_stream.py
+      /opt/spark-apps/spark_stream.py"
     restart: unless-stopped
 
   dashboard:
